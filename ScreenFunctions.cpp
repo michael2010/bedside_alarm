@@ -1,7 +1,7 @@
 #include "DS3231.h"
 #include "global.h"
 #include <SimpleSleep.h>
-#include <BitBang_I2C.h>
+//#include <BitBang_I2C.h>
 
 #define TM1650_DISPLAY_BASE 0x34 // Address of the left-most digit 
 #define TM1650_DCTRL_BASE   0x24 // Address of the control register of the left-most digit
@@ -20,7 +20,7 @@ bool fullPageRefreshNeeded = false;
 rtcSetupPhase rtcPhase = reset;
 byte tempRtcValues[8];
 uint8_t tempRtcValue;
-BBI2C bbi2c;
+//BBI2C bbi2c;
 //extern DateTime now;
 //extern DateTime previous;
 extern byte rtcReadings[7];
@@ -42,11 +42,17 @@ void DS3231InterruptHandler();
 void refreshAll4Digits(byte highByte, byte lowByte);
 
 void bbi2cInit(){
-  memset(&bbi2c, 0, sizeof(bbi2c));
-  bbi2c.bWire = 0; // use bit bang, not wire library
-  bbi2c.iSDA = SDA_PIN;
-  bbi2c.iSCL = SCL_PIN;
-  I2CInit(&bbi2c, 100000L);
+//  memset(&bbi2c, 0, sizeof(bbi2c));
+//  bbi2c.bWire = 0; // use bit bang, not wire library
+//  bbi2c.iSDA = SDA_PIN;
+//  bbi2c.iSCL = SCL_PIN;
+//  I2CInit(&bbi2c, 100000L);
+}
+
+void writeLCDData(uint8_t* lookup, uint8_t len){
+    Wire.beginTransmission(TM1650_DISPLAY_BASE);
+    Wire.write(lookup,len);
+    Wire.endTransmission();
 }
 
 void turnOnOffPeri(bool on){
@@ -67,7 +73,10 @@ void turnOnOffPeri(bool on){
   }
 
   iCtrl = (iCtrl & TM1650_MSK_ONOFF) | on;
-  I2CWrite(&bbi2c, TM1650_DCTRL_BASE, &iCtrl, 1); 
+//  I2CWrite(&bbi2c, TM1650_DCTRL_BASE, &iCtrl, 1); 
+    Wire.beginTransmission(TM1650_DCTRL_BASE);
+    Wire.write(iCtrl);
+    Wire.endTransmission();
 }
 
 void changeDisplayPowerStatus(){  
@@ -96,7 +105,8 @@ bool updateAlarmIcons(){
     // Samples supress-pin value; if LOW, then toggle the supression state
   if(digitalRead(SUPPRESS_NEXT_ALARM_PIN) == LOW){
     isNextAlarmSuppressed = !isNextAlarmSuppressed;
-    I2CWrite(&bbi2c, TM1650_DISPLAY_BASE, isNextAlarmSuppressed?SUPP_CODES:FrEE_CODES, 4); 
+//    I2CWrite(&bbi2c, TM1650_DISPLAY_BASE, isNextAlarmSuppressed?SUPP_CODES:FrEE_CODES, 4); 
+    writeLCDData(isNextAlarmSuppressed?SUPP_CODES:FrEE_CODES,4);
     fullPageRefreshNeeded = true;
     timeout = TIMEOUT_S;
     return true;
@@ -315,7 +325,8 @@ void updateSecondFieldAndIcons(){
       }else{
         displayString[1] |= 0x80;
       }
-      I2CWrite(&bbi2c, TM1650_DISPLAY_BASE+1, displayString+1, 1); 
+//      I2CWrite(&bbi2c, TM1650_DISPLAY_BASE+1, displayString+1, 1); 
+        writeLCDData(displayString+1,1);
     }
   }
 }
@@ -326,7 +337,8 @@ void refreshAll4Digits(byte highByte, byte lowByte){
   displayString[2] = digitMap[lowByte>>4];
   displayString[3] = digitMap[lowByte&0x0F];
 
-  I2CWrite(&bbi2c, TM1650_DISPLAY_BASE, displayString, 4); 
+//  I2CWrite(&bbi2c, TM1650_DISPLAY_BASE, displayString, 4); 
+  writeLCDData(displayString,4);
 }
 
 void refreshWholeScreen(){

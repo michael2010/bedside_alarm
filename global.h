@@ -9,21 +9,25 @@
 
 /* Pin Defintions*/
 //Bitbang I2C
-#define SDA_PIN PIN_PC0
-#define SCL_PIN PIN_PC1
+#define SCL_PIN PIN_PB2
+#define SDA_PIN PIN_PB1
 
 //Human pins
 #define DISABLE_ALARM_PIN PIN_PD1
 #define BUTTON_PIN PIN_PD2
-#define SUPPRESS_NEXT_ALARM_PIN PIN_PD4
-#define UPD_RTC_PIN PIN_PD5
-#define UPD_RTC_INC_PIN PIN_PD6
-#define UPD_RTC_DEC_PIN PIN_PD7
+#define SUPPRESS_NEXT_ALARM_PIN PIN_PD5
+#define UPD_RTC_PIN PIN_PD6
+#define UPD_RTC_INC_PIN PIN_PD7
+#define UPD_RTC_DEC_PIN PIN_PB0
 
 //Interface Pin
 #define DS3231_INT PIN_PD3
-#define PERI_PWR PIN_PC3
-#define SPEAKER_PIN PIN_PD0
+#define SPEAKER_PIN PIN_PB7
+
+//Power Pin
+#define PERI_PWR PIN_PB3
+#define DS3231_VCC PIN_PC3
+#define DS3231_GND PIN_PC2
 
 #define CLOCK_ADDRESS 0x68
 

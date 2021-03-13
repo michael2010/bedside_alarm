@@ -2,7 +2,7 @@
 #include "DS3231.h"
 #include <SimpleSleep.h>
 
-RTClib RTC;
+
 DS3231 clockController;
 //DateTime previous;
 //DateTime now;
@@ -35,9 +35,14 @@ byte readButtonState(byte pinNo);
 void bbi2cInit();
 
 void setup() {
+  // DS3231 init
+  Wire.begin();
   // Alarm config pins init
-//  pinMode(SUPPRESS_NEXT_ALARM_PIN, INPUT_PULLUP);
-//  pinMode(DISABLE_ALARM_PIN, INPUT_PULLUP);
+  // Power Init
+  pinMode(PERI_PWR, OUTPUT);
+  pinMode(DS3231_GND, OUTPUT);
+  digitalWrite(DS3231_GND, LOW);
+  turnOnOffPeri(true);
 
   Sleep.deeplyFor(200);
 
@@ -45,16 +50,12 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   pinMode(DS3231_INT, INPUT_PULLUP);
 
-  // DS3231 init
-  Wire.begin();
-  clockController.turnOnAlarm(2);
+//  clockController.turnOnAlarm(2);
   readDateTimeFromRTC();
   previousMinute = rtcReadings[1];
 
   // Display Init
   bbi2cInit();
-  
-//  now = previous = RTC.now();
 
   // Debug via serial
 //  Serial.begin(115200);
@@ -70,14 +71,10 @@ void loop() {
     // Must call checkIfAlarm to clear the DS3231 interrupt flag
     alarm2Set = clockController.checkIfAlarm(2);
     
-//    Serial.println(isNextAlarmSuppressed+0x30);
-//    Serial.println("^supp");
+
     if(!isNextAlarmSuppressed && digitalRead(DISABLE_ALARM_PIN) /*&& (clockController.getDoW()<6)*/){
-//      Serial.println("1");
       if(alarm2Set){
-//        Serial.println("2");
         if(!displayStatus){
-//          Serial.println("3");
           buttonPressHandler();
         }
         timeout = ALARM_BEEP_PERIOD;
@@ -107,34 +104,22 @@ void loop() {
   }else{
     // reload the current time from RTC
     readDateTimeFromRTC();
-//    now = RTC.now();
 
     // determine if update the second field is enough
-    if(previousMinute == rtcReadings[1]){
+    if(previousMinute == rtcReadings[1] || rtcPhase !=reset){
       updateSecondFieldAndIcons();
     }else{
       refreshWholeScreen();
     }
 
-    // Call delay instead of power-down if alarm is active
-
-//    detachInterrupt(digitalPinToInterrupt(BUTTON_PIN));
-
-//    // wait for DS3231 pin to go high
-//    while(!digitalRead(DS3231_INT)){
-//      Sleep.deeplyFor(10);
-//    };
-    
-//    inBeepingMode = true;
-//    attachInterrupt(digitalPinToInterrupt(DS3231_INT), DS3231InterruptHandler, LOW);
-//    Sleep.deeply();
-//    detachInterrupt(digitalPinToInterrupt(DS3231_INT));
-//    inBeepingMode = false;
-
     if(alarm2Set){
       delay(1000);
     }else{
-      Sleep.deeplyFor(1000);
+      if(rtcPhase !=reset){
+        Sleep.deeplyFor(200);
+      }else{
+        Sleep.deeplyFor(1000);
+      }
     }
 
     // Signal to shutdown display if timeout is reached
