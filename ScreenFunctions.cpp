@@ -1,7 +1,7 @@
 #include "DS3231.h"
 #include "global.h"
 #include <SimpleSleep.h>
-//#include <BitBang_I2C.h>
+#include <BitBang_I2C.h>
 
 #define TM1650_DISPLAY_BASE 0x34 // Address of the left-most digit 
 #define TM1650_DCTRL_BASE   0x24 // Address of the control register of the left-most digit
@@ -20,7 +20,7 @@ bool fullPageRefreshNeeded = false;
 rtcSetupPhase rtcPhase = reset;
 byte tempRtcValues[8];
 uint8_t tempRtcValue;
-//BBI2C bbi2c;
+BBI2C bbi2c;
 //extern DateTime now;
 //extern DateTime previous;
 extern byte rtcReadings[7];
@@ -42,22 +42,17 @@ void DS3231InterruptHandler();
 void refreshAll4Digits(byte highByte, byte lowByte);
 
 void bbi2cInit(){
-//  memset(&bbi2c, 0, sizeof(bbi2c));
-//  bbi2c.bWire = 0; // use bit bang, not wire library
-//  bbi2c.iSDA = SDA_PIN;
-//  bbi2c.iSCL = SCL_PIN;
-//  I2CInit(&bbi2c, 100000L);
-}
-
-void writeLCDData(uint8_t* lookup, uint8_t len){
-    Wire.beginTransmission(TM1650_DISPLAY_BASE);
-    Wire.write(lookup,len);
-    Wire.endTransmission();
+  memset(&bbi2c, 0, sizeof(bbi2c));
+  bbi2c.bWire = 0; // use bit bang, not wire library
+  bbi2c.iSDA = SDA_PIN;
+  bbi2c.iSCL = SCL_PIN;
+  I2CInit(&bbi2c, 100000L);
 }
 
 void turnOnOffPeri(bool on){
   if(on){
     digitalWrite(PERI_PWR, LOW);
+//    digitalWrite(DS3231_VCC, HIGH);
     pinMode(SUPPRESS_NEXT_ALARM_PIN, INPUT_PULLUP);
     pinMode(DISABLE_ALARM_PIN, INPUT_PULLUP);
     pinMode(UPD_RTC_PIN, INPUT_PULLUP);
@@ -65,18 +60,19 @@ void turnOnOffPeri(bool on){
     pinMode(UPD_RTC_DEC_PIN, INPUT_PULLUP);
   }else{
     digitalWrite(PERI_PWR, HIGH);
-    pinMode(SUPPRESS_NEXT_ALARM_PIN, INPUT);
-    pinMode(DISABLE_ALARM_PIN, INPUT);
-    pinMode(UPD_RTC_PIN, INPUT);
-    pinMode(UPD_RTC_INC_PIN, INPUT);
-    pinMode(UPD_RTC_DEC_PIN, INPUT);
+//    digitalWrite(DS3231_VCC, LOW);
+//    pinMode(SUPPRESS_NEXT_ALARM_PIN, INPUT);
+//    pinMode(DISABLE_ALARM_PIN, INPUT);
+//    pinMode(UPD_RTC_PIN, INPUT);
+//    pinMode(UPD_RTC_INC_PIN, INPUT);
+//    pinMode(UPD_RTC_DEC_PIN, INPUT);
   }
 
   iCtrl = (iCtrl & TM1650_MSK_ONOFF) | on;
 //  I2CWrite(&bbi2c, TM1650_DCTRL_BASE, &iCtrl, 1); 
-    Wire.beginTransmission(TM1650_DCTRL_BASE);
-    Wire.write(iCtrl);
-    Wire.endTransmission();
+  Wire.beginTransmission(TM1650_DCTRL_BASE);
+  Wire.write(iCtrl);
+  Wire.endTransmission();
 }
 
 void changeDisplayPowerStatus(){  
@@ -106,7 +102,9 @@ bool updateAlarmIcons(){
   if(digitalRead(SUPPRESS_NEXT_ALARM_PIN) == LOW){
     isNextAlarmSuppressed = !isNextAlarmSuppressed;
 //    I2CWrite(&bbi2c, TM1650_DISPLAY_BASE, isNextAlarmSuppressed?SUPP_CODES:FrEE_CODES, 4); 
-    writeLCDData(isNextAlarmSuppressed?SUPP_CODES:FrEE_CODES,4);
+    Wire.beginTransmission(TM1650_DISPLAY_BASE);
+    Wire.write(isNextAlarmSuppressed?SUPP_CODES:FrEE_CODES,4);
+    Wire.endTransmission();
     fullPageRefreshNeeded = true;
     timeout = TIMEOUT_S;
     return true;
@@ -114,14 +112,8 @@ bool updateAlarmIcons(){
     rtcPhase=rtcSetupPhase((((uint8_t)rtcPhase)+1)%5);
 
     if(rtcPhase==reset){
-      /*rtcReadings[0]=0x00;
-      rtcReadings[1]=tempRtcValues[7];
-      rtcReadings[2]=tempRtcValues[6];
-      rtcReadings[3]=tempRtcValues[5];
-      rtcReadings[4]=tempRtcValues[3];
-      rtcReadings[5]=tempRtcValues[2];
-      rtcReadings[6]=tempRtcValues[1];*/
       // Update RTC
+      digitalWrite(FD650_CLK_GATE, LOW);
       timeout = TIMEOUT_S;
       Wire.beginTransmission(CLOCK_ADDRESS);
       Wire.write(0x00);
@@ -141,6 +133,7 @@ bool updateAlarmIcons(){
       Wire.write(0x80);
       Wire.write(0b00000110);
       Wire.endTransmission();
+      digitalWrite(FD650_CLK_GATE, HIGH);
     }else{
       if(rtcPhase==year){
         tempRtcValues[0]=0x20;
@@ -326,7 +319,9 @@ void updateSecondFieldAndIcons(){
         displayString[1] |= 0x80;
       }
 //      I2CWrite(&bbi2c, TM1650_DISPLAY_BASE+1, displayString+1, 1); 
-        writeLCDData(displayString+1,1);
+      Wire.beginTransmission(TM1650_DISPLAY_BASE+1);
+      Wire.write(displayString+1, 1);
+      Wire.endTransmission();
     }
   }
 }
@@ -338,7 +333,9 @@ void refreshAll4Digits(byte highByte, byte lowByte){
   displayString[3] = digitMap[lowByte&0x0F];
 
 //  I2CWrite(&bbi2c, TM1650_DISPLAY_BASE, displayString, 4); 
-  writeLCDData(displayString,4);
+  Wire.beginTransmission(TM1650_DISPLAY_BASE);
+  Wire.write(displayString,4);
+  Wire.endTransmission();
 }
 
 void refreshWholeScreen(){

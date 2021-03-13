@@ -23,6 +23,7 @@
 //Interface Pin
 #define DS3231_INT PIN_PD3
 #define SPEAKER_PIN PIN_PB7
+#define FD650_CLK_GATE PIN_PC1
 
 //Power Pin
 #define PERI_PWR PIN_PB3

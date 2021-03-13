@@ -37,11 +37,13 @@ void bbi2cInit();
 void setup() {
   // DS3231 init
   Wire.begin();
+  Wire.setClock(100000);
   // Alarm config pins init
   // Power Init
-  pinMode(PERI_PWR, OUTPUT);
   pinMode(DS3231_GND, OUTPUT);
-  digitalWrite(DS3231_GND, LOW);
+  pinMode(PERI_PWR, OUTPUT);
+  pinMode(FD650_CLK_GATE, OUTPUT);
+  digitalWrite(FD650_CLK_GATE, HIGH);
   turnOnOffPeri(true);
 
   Sleep.deeplyFor(200);
@@ -50,12 +52,11 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   pinMode(DS3231_INT, INPUT_PULLUP);
 
-//  clockController.turnOnAlarm(2);
   readDateTimeFromRTC();
   previousMinute = rtcReadings[1];
 
   // Display Init
-  bbi2cInit();
+//  bbi2cInit();
 
   // Debug via serial
 //  Serial.begin(115200);
@@ -69,8 +70,9 @@ void loop() {
   if(rtcInterrupted){
 //    Serial.println("RTC interrupted");
     // Must call checkIfAlarm to clear the DS3231 interrupt flag
+    digitalWrite(FD650_CLK_GATE, LOW);
     alarm2Set = clockController.checkIfAlarm(2);
-    
+    digitalWrite(FD650_CLK_GATE, HIGH);
 
     if(!isNextAlarmSuppressed && digitalRead(DISABLE_ALARM_PIN) /*&& (clockController.getDoW()<6)*/){
       if(alarm2Set){
@@ -127,7 +129,9 @@ void loop() {
       timeout = TIMEOUT_S;
     }
     else if(--timeout == 0){
+      digitalWrite(FD650_CLK_GATE, LOW);
       clockController.turnOnAlarm(2);
+      digitalWrite(FD650_CLK_GATE, HIGH);
       buttonPressed = true;
       displayStatus = false;
     }
@@ -135,6 +139,7 @@ void loop() {
 }
 
 void readDateTimeFromRTC(){
+  digitalWrite(FD650_CLK_GATE, LOW);
   Wire.beginTransmission(CLOCK_ADDRESS);
   Wire.write(0);
   Wire.endTransmission();
@@ -144,4 +149,5 @@ void readDateTimeFromRTC(){
   for(;itr<7;itr++){
     rtcReadings[itr] = Wire.read();
   }
+  digitalWrite(FD650_CLK_GATE, HIGH);
 }
