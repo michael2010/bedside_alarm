@@ -35,16 +35,18 @@ byte readButtonState(byte pinNo);
 void bbi2cInit();
 
 void setup() {
-  // DS3231 init
-  Wire.begin();
-  Wire.setClock(100000);
   // Alarm config pins init
   // Power Init
   pinMode(DS3231_GND, OUTPUT);
   pinMode(PERI_PWR, OUTPUT);
   pinMode(FD650_CLK_GATE, OUTPUT);
-  digitalWrite(FD650_CLK_GATE, HIGH);
   turnOnOffPeri(true);
+
+  pinMode(SUPPRESS_NEXT_ALARM_PIN, INPUT_PULLUP);
+  pinMode(DISABLE_ALARM_PIN, INPUT_PULLUP);
+  pinMode(UPD_RTC_PIN, INPUT_PULLUP);
+  pinMode(UPD_RTC_INC_PIN, INPUT_PULLUP);
+  pinMode(UPD_RTC_DEC_PIN, INPUT_PULLUP);
 
   Sleep.deeplyFor(200);
 
@@ -68,6 +70,7 @@ void setup() {
 void loop() {
 
   if(rtcInterrupted){
+    turnOnOffPeri(true);
 //    Serial.println("RTC interrupted");
     // Must call checkIfAlarm to clear the DS3231 interrupt flag
     digitalWrite(FD650_CLK_GATE, LOW);

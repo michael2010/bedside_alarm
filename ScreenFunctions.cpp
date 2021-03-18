@@ -1,7 +1,7 @@
 #include "DS3231.h"
 #include "global.h"
 #include <SimpleSleep.h>
-#include <BitBang_I2C.h>
+//#include <BitBang_I2C.h>
 
 #define TM1650_DISPLAY_BASE 0x34 // Address of the left-most digit 
 #define TM1650_DCTRL_BASE   0x24 // Address of the control register of the left-most digit
@@ -13,6 +13,7 @@
 const byte digitMap[11] {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7f, 0x6f, 0x40};
 uint8_t SUPP_CODES[4] {0x6D, 0x3E, 0x73, 0x73};
 uint8_t FrEE_CODES[4] {0x71, 0x50, 0x79, 0x79};
+const uint8_t ALARM2_SETTING[5] {0x0b, 0x28, 0x06, 0x80,0b00000110};
 
 byte iCtrl=INITIAL_DISPLAY_CTRL;
 uint8_t displayString[4];
@@ -20,7 +21,7 @@ bool fullPageRefreshNeeded = false;
 rtcSetupPhase rtcPhase = reset;
 byte tempRtcValues[8];
 uint8_t tempRtcValue;
-BBI2C bbi2c;
+//BBI2C bbi2c;
 //extern DateTime now;
 //extern DateTime previous;
 extern byte rtcReadings[7];
@@ -41,38 +42,38 @@ void readDateTimeFromRTC();
 void DS3231InterruptHandler();
 void refreshAll4Digits(byte highByte, byte lowByte);
 
-void bbi2cInit(){
-  memset(&bbi2c, 0, sizeof(bbi2c));
-  bbi2c.bWire = 0; // use bit bang, not wire library
-  bbi2c.iSDA = SDA_PIN;
-  bbi2c.iSCL = SCL_PIN;
-  I2CInit(&bbi2c, 100000L);
-}
+//void bbi2cInit(){
+//  memset(&bbi2c, 0, sizeof(bbi2c));
+//  bbi2c.bWire = 0; // use bit bang, not wire library
+//  bbi2c.iSDA = SDA_PIN;
+//  bbi2c.iSCL = SCL_PIN;
+//  I2CInit(&bbi2c, 100000L);
+//}
 
 void turnOnOffPeri(bool on){
-  if(on){
-    digitalWrite(PERI_PWR, LOW);
-//    digitalWrite(DS3231_VCC, HIGH);
-    pinMode(SUPPRESS_NEXT_ALARM_PIN, INPUT_PULLUP);
-    pinMode(DISABLE_ALARM_PIN, INPUT_PULLUP);
-    pinMode(UPD_RTC_PIN, INPUT_PULLUP);
-    pinMode(UPD_RTC_INC_PIN, INPUT_PULLUP);
-    pinMode(UPD_RTC_DEC_PIN, INPUT_PULLUP);
-  }else{
-    digitalWrite(PERI_PWR, HIGH);
-//    digitalWrite(DS3231_VCC, LOW);
-//    pinMode(SUPPRESS_NEXT_ALARM_PIN, INPUT);
-//    pinMode(DISABLE_ALARM_PIN, INPUT);
-//    pinMode(UPD_RTC_PIN, INPUT);
-//    pinMode(UPD_RTC_INC_PIN, INPUT);
-//    pinMode(UPD_RTC_DEC_PIN, INPUT);
-  }
 
+  digitalWrite(PERI_PWR, on?LOW:HIGH);
+  digitalWrite(DS3231_VCC, on?HIGH:LOW);
+  digitalWrite(FD650_CLK_GATE, on?HIGH:LOW);
+
+  // I2C init
+  Wire.begin();
+  delay(50);
+//  Wire.setClock(100000);
+
+  // Turn on/off display
   iCtrl = (iCtrl & TM1650_MSK_ONOFF) | on;
 //  I2CWrite(&bbi2c, TM1650_DCTRL_BASE, &iCtrl, 1); 
   Wire.beginTransmission(TM1650_DCTRL_BASE);
   Wire.write(iCtrl);
   Wire.endTransmission();
+  
+  if(!on){
+//    pinMode(SCL, OUTPUT);
+    pinMode(SDA, OUTPUT);
+//    digitalWrite(SCL, LOW);
+    digitalWrite(SDA, LOW);
+  }
 }
 
 void changeDisplayPowerStatus(){  
@@ -127,11 +128,7 @@ bool updateAlarmIcons(){
       Wire.endTransmission();
 
       Wire.beginTransmission(CLOCK_ADDRESS);
-      Wire.write(0x0b);  // A1 starts at 0bh
-      Wire.write(0x28);// | 0x80);
-      Wire.write(0x06);// | 0x80);
-      Wire.write(0x80);
-      Wire.write(0b00000110);
+      Wire.write(ALARM2_SETTING,5);
       Wire.endTransmission();
       digitalWrite(FD650_CLK_GATE, HIGH);
     }else{
