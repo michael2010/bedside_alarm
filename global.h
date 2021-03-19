@@ -2,6 +2,7 @@
 #define _BEDSIDEALARM_HEADER_
 
 #include <Arduino.h>
+#include "Wire.h"
 
 #define TIMEOUT_S 5
 #define ALARM_BEEP_PERIOD 20
@@ -40,6 +41,16 @@ enum rtcSetupPhase:uint8_t{
   reset=4
 };
 
+enum ClockState :uint8_t{
+  Initing,
+  Sleeping,
+  AlarmTriggered,
+  Alarming,
+  ButtonTriggered,
+  RTCUpdating,
+  Idle
+};
+
 //#define ST7920_CS_PIN 10
 //#define ST7920_PWR_PIN 9
 
@@ -47,7 +58,13 @@ static uint8_t bcd2bin (uint8_t val) { return val - 6 * (val>>4); }
 static uint8_t dec2bin (uint8_t val) { return val + 6 * (val/10); }
 
 void turnOnOffPeri(bool on);
+void readDateTimeFromRTC();
+void updateRTCSettings();
+void refreshScreen();
 
+extern ClockState centralClkState;
 extern rtcSetupPhase rtcPhase;
+extern byte rtcReadings[7];
+extern byte tempRtcValues[8];
 
 #endif
