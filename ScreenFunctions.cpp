@@ -18,19 +18,17 @@ bool fullPageRefreshNeeded = false;
 rtcSetupPhase rtcPhase = reset;
 byte tempRtcValues[8];
 uint8_t tempRtcValue;
+volatile bool displayStatus = false;
+volatile byte timeout = TIMEOUT_S;
 
 extern byte rtcReadings[7];
-extern byte previousMinute;
 extern bool isNextAlarmSuppressed;
-extern bool displayStatus;
 extern SimpleSleep Sleep;
 extern bool buttonInterruptDetachmentAllowed;
-extern uint8_t timeout;
 
 //function declarations
 void buttonPressHandler();
 void DS3231InterruptHandler();
-bool CheckButtons();
 
 void turnOnOffPeri(bool on){
 
@@ -79,7 +77,7 @@ void changeDisplayPowerStatus(){
 }
 
 bool updateSecondFieldAndIcons(){
-  if(!CheckButtons() && rtcPhase==reset){
+  if(rtcPhase==reset){
     if(displayString[1] & 0x80){
       displayString[1] &= ~0x80;
     }else{
@@ -114,6 +112,7 @@ void refreshAll4Digits(byte highByte, byte lowByte){
 
 void displayAlarmState(){
   refreshDisplayString(isNextAlarmSuppressed?SUPP_CODES:FrEE_CODES);
+//  Sleep.deeplyFor(1000);
 }
 
 void refreshScreen(){

@@ -5,8 +5,9 @@
 #include "Wire.h"
 
 #define TIMEOUT_S 5
-#define ALARM_BEEP_PERIOD 20
-#define RTC_SETTING_TIMEOUT 60*2
+#define ALARM_BEEP_PERIOD 30
+#define MENU_TIMEOUT 30
+#define RTC_SETTING_TIMEOUT 30*5
 
 /* Pin Defintions*/
 //Bitbang I2C
@@ -48,7 +49,15 @@ enum ClockState :uint8_t{
   Alarming,
   ButtonTriggered,
   RTCUpdating,
+  FunctionMenu,
   Idle
+};
+
+enum Menu :uint8_t{
+  Clock,
+  Suppression,
+  SetDateTime,
+  Weekday
 };
 
 //#define ST7920_CS_PIN 10
@@ -61,10 +70,17 @@ void turnOnOffPeri(bool on);
 void readDateTimeFromRTC();
 void updateRTCSettings();
 void refreshScreen();
+bool CheckButton(uint8_t pinNumb, void (*handler)());
+void SuppressButtonHandler();
+void SettingButtonHandler();
+void UpButtonHandler();
+void DownButtonHandler();
 
 extern ClockState centralClkState;
+extern Menu currentMenu;
 extern rtcSetupPhase rtcPhase;
 extern byte rtcReadings[7];
 extern byte tempRtcValues[8];
+extern byte previousMinute;
 
 #endif

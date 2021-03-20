@@ -8,6 +8,7 @@ DS3231 clockController;
 SimpleSleep Sleep;
 
 ClockState centralClkState = Initing;
+Menu currentMenu = Clock;
 
 //Alarm Flags
 volatile bool rtcInterrupted = false;
@@ -15,12 +16,9 @@ extern bool isNextAlarmSuppressed;
 //bool isAlarmDisabled = false;
 
 //Screen Flags
-volatile bool buttonPressed = true;
-volatile bool displayStatus = false;
-volatile byte timeout = TIMEOUT_S;
-
-// Time data from RTC
-byte previousMinute;
+extern bool buttonPressed;
+extern bool displayStatus;
+extern uint8_t timeout;
 
 // Function declarations
 void refreshScreen();
@@ -77,12 +75,13 @@ void loop(){
       displayStatus = true;
       changeDisplayPowerStatus();
     }
+    attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonPressHandler, LOW);
   }else if(rtcInterrupted){
     turnOnOffPeri(true);
     clockController.checkIfAlarm(2); // Must call checkIfAlarm to clear the DS3231 interrupt flag
     rtcInterrupted = false;
-    
-    if(!isNextAlarmSuppressed && digitalRead(DISABLE_ALARM_PIN) /*&& (clockController.getDoW()<6)*/){
+    readDateTimeFromRTC();
+    if(!isNextAlarmSuppressed && digitalRead(DISABLE_ALARM_PIN) && rtcReadings[3]<6){
       timeout = ALARM_BEEP_PERIOD;
       tone(SPEAKER_PIN, 1000,700);
       centralClkState = Alarming;
@@ -102,18 +101,34 @@ void loop(){
       changeDisplayPowerStatus();
       break;
     case RTCUpdating:
+    {
+      CheckButton(UPD_RTC_INC_PIN, UpButtonHandler);
+      CheckButton(UPD_RTC_DEC_PIN, DownButtonHandler);
+      CheckButton(UPD_RTC_PIN, SettingButtonHandler);
+      Sleep.deeplyFor(200);
       break;
+    }
+    case FunctionMenu:
+    {
+      break;
+    }
     case Alarming:
     case Idle:
     default:
     {
-      refreshScreen();
-    
-      if(rtcPhase !=reset){
-        Sleep.deeplyFor(200);
+      if(CheckButton(UPD_RTC_PIN, SettingButtonHandler)){
+        centralClkState = RTCUpdating;
+        break;
       }else{
-        Sleep.deeplyFor(1000);
+        bool anyButtonClicked = false;
+        anyButtonClicked |= CheckButton(UPD_RTC_INC_PIN, SettingButtonHandler));
+        anyButtonClicked |= CheckButton(UPD_RTC_DEC_PIN, SettingButtonHandler));
+        anyButtonClicked |= CheckButton(SUPPRESS_NEXT_ALARM_PIN, SuppressButtonHandler);
+        if(!anyButtonClicked)
+          refreshScreen(); 
+        }
       }
+      Sleep.deeplyFor(1000);
     
       // Signal to shutdown display if timeout is reached
       if(digitalRead(BUTTON_PIN) == LOW){

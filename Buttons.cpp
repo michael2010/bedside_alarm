@@ -1,5 +1,6 @@
 #include "global.h"
 
+volatile bool buttonPressed = true;
 bool isNextAlarmSuppressed = false;
 
 extern uint8_t timeout;
@@ -7,22 +8,43 @@ extern uint8_t timeout;
 void displayAlarmState();
 void refreshAll4Digits(byte highByte, byte lowByte);
 
-bool CheckButtons(){
-    // Samples supress-pin value; if LOW, then toggle the supression state
-  if(digitalRead(SUPPRESS_NEXT_ALARM_PIN) == LOW){
+void waitUntilReleased(uint8_t button){
+  while(digitalRead(button) == LOW){}
+}
+
+void SuppressButtonHandler(){
     isNextAlarmSuppressed = !isNextAlarmSuppressed;
     displayAlarmState();
     timeout = TIMEOUT_S;
+}
+
+bool CheckButton(uint8_t pinNumb, void (*handler)()){
+  if(digitalRead(pinNumb) == LOW){
+    handler();
+    waitUntilReleased(pinNumb);
+    previousMinute = 0xFF;
     return true;
-  }else if(digitalRead(UPD_RTC_PIN) == LOW){
+  }
+  return false;
+}
+
+bool CheckAndDisplayMenu(uint8_t pinNumb, void (*handler)()){
+  if(CheckButton(pinNumb, handler)){
+    
+  }
+}
+
+void SettingButtonHandler(){
     rtcPhase=rtcSetupPhase((((uint8_t)rtcPhase)+1)%5);
 
     if(rtcPhase==reset){
       // Update RTC
       timeout = TIMEOUT_S;
       updateRTCSettings();
+      centralClkState = Idle;
     }else{
       if(rtcPhase==year){
+        centralClkState = RTCUpdating;
         tempRtcValues[0]=0x20;
         tempRtcValues[1]=rtcReadings[6];
         tempRtcValues[2]=rtcReadings[5];
@@ -35,9 +57,9 @@ bool CheckButtons(){
       refreshAll4Digits(tempRtcValues[2*(uint8_t)rtcPhase],tempRtcValues[2*(uint8_t)rtcPhase+1]);
       timeout = RTC_SETTING_TIMEOUT;
     }
-    return true;
+}
 
-  }else if(digitalRead(UPD_RTC_INC_PIN) == LOW){
+void UpButtonHandler(){
     timeout = RTC_SETTING_TIMEOUT;
     switch(rtcPhase){
       case year:
@@ -119,8 +141,9 @@ bool CheckButtons(){
       }
     }
     refreshAll4Digits(tempRtcValues[2*(uint8_t)rtcPhase],tempRtcValues[2*(uint8_t)rtcPhase+1]);
-    return true;
-  }else if(digitalRead(UPD_RTC_DEC_PIN) == LOW){
+}
+
+void DownButtonHandler(){
     timeout = RTC_SETTING_TIMEOUT;
     switch(rtcPhase){
       case year:
@@ -189,7 +212,12 @@ bool CheckButtons(){
       }
     }
     refreshAll4Digits(tempRtcValues[2*(uint8_t)rtcPhase],tempRtcValues[2*(uint8_t)rtcPhase+1]);
-    return true;
-  }
-  return false;
+}
+
+void advanceMenu(){
+  currentMenu=Menu((((uint8_t)currentMenu)+1)%4);
+}
+
+void revertMenu(){
+  currentMenu=Menu((((uint8_t)currentMenu)-1)%4);
 }

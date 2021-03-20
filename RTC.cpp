@@ -2,6 +2,7 @@
 
 const uint8_t ALARM2_SETTING[5] {0x0b, 0x28, 0x06, 0x80,0b00000110};
 byte rtcReadings[7];
+byte previousMinute;
 
 void readDateTimeFromRTC(){
   Wire.beginTransmission(CLOCK_ADDRESS);
