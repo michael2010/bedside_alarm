@@ -54,10 +54,10 @@ enum ClockState :uint8_t{
 };
 
 enum Menu :uint8_t{
-  Clock,
-  Suppression,
-  SetDateTime,
-  Weekday
+  Suppression=0,
+  Weekday=1,
+  SetDateTime=2,
+  batteryRead=3
 };
 
 //#define ST7920_CS_PIN 10
@@ -70,11 +70,16 @@ void turnOnOffPeri(bool on);
 void readDateTimeFromRTC();
 void updateRTCSettings();
 void refreshScreen();
+void refreshDisplayString(uint8_t* displayStr);
 bool CheckButton(uint8_t pinNumb, void (*handler)());
 void SuppressButtonHandler();
 void SettingButtonHandler();
 void UpButtonHandler();
 void DownButtonHandler();
+void advanceMenu();
+void previousMenu();
+void enterFunctionMenu();
+void useFunction();
 
 extern ClockState centralClkState;
 extern Menu currentMenu;
@@ -82,5 +87,9 @@ extern rtcSetupPhase rtcPhase;
 extern byte rtcReadings[7];
 extern byte tempRtcValues[8];
 extern byte previousMinute;
+extern bool weekdayOnlyFlag;
+extern uint8_t displayString[4];
+
+static uint8_t bin2bcd (uint8_t val) { return val + 6 * (val / 10); }
 
 #endif

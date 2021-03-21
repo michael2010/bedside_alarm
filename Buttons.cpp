@@ -2,11 +2,24 @@
 
 volatile bool buttonPressed = true;
 bool isNextAlarmSuppressed = false;
+bool weekdayOnlyFlag = true;
 
 extern uint8_t timeout;
 
 void displayAlarmState();
 void refreshAll4Digits(byte highByte, byte lowByte);
+
+uint8_t MENU_ITEMS[4*4] 
+  { 0b00111111, 0b01010100, 0b01111001, 0b00000000, // Supression - "One"
+    0b00111110, 0b00001110, 0b01111001, 0b01111001, // Weekday? - "LUEE"
+    0b01011110, 0b01110111, 0b01111000, 0b01111001, // DateTime - "DAtE"
+    0b01111100, 0b01110111, 0b01111000, 0b01111000  // Battery - "BAtt"
+  };
+
+uint8_t WEEKONLYFLAGCHARS[4*2] 
+  { 0b00000110, 0b01000000, 0b01101101, 0b00000000,
+    0b00000110, 0b01000000, 0b00000111, 0b00000000
+  };
 
 void waitUntilReleased(uint8_t button){
   while(digitalRead(button) == LOW){}
@@ -15,7 +28,7 @@ void waitUntilReleased(uint8_t button){
 void SuppressButtonHandler(){
     isNextAlarmSuppressed = !isNextAlarmSuppressed;
     displayAlarmState();
-    timeout = TIMEOUT_S;
+//    timeout = TIMEOUT_S;
 }
 
 bool CheckButton(uint8_t pinNumb, void (*handler)()){
@@ -26,12 +39,6 @@ bool CheckButton(uint8_t pinNumb, void (*handler)()){
     return true;
   }
   return false;
-}
-
-bool CheckAndDisplayMenu(uint8_t pinNumb, void (*handler)()){
-  if(CheckButton(pinNumb, handler)){
-    
-  }
 }
 
 void SettingButtonHandler(){
@@ -216,8 +223,58 @@ void DownButtonHandler(){
 
 void advanceMenu(){
   currentMenu=Menu((((uint8_t)currentMenu)+1)%4);
+  refreshDisplayString(MENU_ITEMS+((uint8_t)currentMenu)*4);
 }
 
-void revertMenu(){
+void previousMenu(){
   currentMenu=Menu((((uint8_t)currentMenu)-1)%4);
+  refreshDisplayString(MENU_ITEMS+((uint8_t)currentMenu)*4);
+}
+
+void enterFunctionMenu(){
+  currentMenu=Suppression;
+  centralClkState = FunctionMenu;
+  refreshDisplayString(MENU_ITEMS+((uint8_t)currentMenu)*4);
+}
+
+void readBattery(){
+  
+}
+
+void useFunction(){
+  switch(currentMenu){
+    case Suppression:
+    {
+      isNextAlarmSuppressed = !isNextAlarmSuppressed;
+      displayAlarmState();
+      break;
+    }
+    case SetDateTime:
+    {
+      centralClkState = RTCUpdating;
+      break;
+    }
+    case Weekday:
+    {
+      weekdayOnlyFlag = !weekdayOnlyFlag;
+      refreshDisplayString(weekdayOnlyFlag?WEEKONLYFLAGCHARS+4:WEEKONLYFLAGCHARS);
+      break;
+    }
+    case batteryRead:
+    {
+      ADCSRA |= ADEN; 
+      analogReference(INTERNAL);
+      uint8_t fourdigitreading [2];
+      analogRead(A0);
+      int sensorValue = analogRead(A0);
+      ADCSRA &= ~(ADEN); 
+      fourdigitreading[0] = bin2bcd((uint8_t)(sensorValue%100));
+      fourdigitreading[1] = bin2bcd((uint8_t)(sensorValue/100));
+      refreshAll4Digits(fourdigitreading[1],fourdigitreading[0]);
+      refreshDisplayString(displayString);
+      
+      break;
+//      float voltage= sensorValue * (10.0 / 1023.0);
+    }
+  }
 }

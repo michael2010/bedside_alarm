@@ -8,7 +8,7 @@ DS3231 clockController;
 SimpleSleep Sleep;
 
 ClockState centralClkState = Initing;
-Menu currentMenu = Clock;
+Menu currentMenu = Suppression;
 
 //Alarm Flags
 volatile bool rtcInterrupted = false;
@@ -81,7 +81,7 @@ void loop(){
     clockController.checkIfAlarm(2); // Must call checkIfAlarm to clear the DS3231 interrupt flag
     rtcInterrupted = false;
     readDateTimeFromRTC();
-    if(!isNextAlarmSuppressed && digitalRead(DISABLE_ALARM_PIN) && rtcReadings[3]<6){
+    if(!isNextAlarmSuppressed && digitalRead(DISABLE_ALARM_PIN) && (!weekdayOnlyFlag || rtcReadings[3]<6)){
       timeout = ALARM_BEEP_PERIOD;
       tone(SPEAKER_PIN, 1000,700);
       centralClkState = Alarming;
@@ -93,7 +93,8 @@ void loop(){
       centralClkState = Sleeping;
     }
   }
-
+  bool anyButtonClicked = false;
+  
   // Clock State handling
   switch(centralClkState){
     case Sleeping:
@@ -110,23 +111,20 @@ void loop(){
     }
     case FunctionMenu:
     {
+      CheckButton(UPD_RTC_INC_PIN, advanceMenu);
+      CheckButton(UPD_RTC_DEC_PIN, previousMenu);
+      CheckButton(UPD_RTC_PIN, useFunction);
+      Sleep.deeplyFor(500);
       break;
     }
     case Alarming:
     case Idle:
     default:
     {
-      if(CheckButton(UPD_RTC_PIN, SettingButtonHandler)){
-        centralClkState = RTCUpdating;
+      if(CheckButton(UPD_RTC_PIN, enterFunctionMenu)){
         break;
       }else{
-        bool anyButtonClicked = false;
-        anyButtonClicked |= CheckButton(UPD_RTC_INC_PIN, SettingButtonHandler));
-        anyButtonClicked |= CheckButton(UPD_RTC_DEC_PIN, SettingButtonHandler));
-        anyButtonClicked |= CheckButton(SUPPRESS_NEXT_ALARM_PIN, SuppressButtonHandler);
-        if(!anyButtonClicked)
-          refreshScreen(); 
-        }
+        refreshScreen(); 
       }
       Sleep.deeplyFor(1000);
     

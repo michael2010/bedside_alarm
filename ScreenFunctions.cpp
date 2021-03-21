@@ -9,8 +9,8 @@
 #define INITIAL_DISPLAY_CTRL 0b00010001;
 
 const byte digitMap[11] {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7f, 0x6f, 0x40};
-uint8_t SUPP_CODES[4] {0x6D, 0x3E, 0x73, 0x73};
-uint8_t FrEE_CODES[4] {0x71, 0x50, 0x79, 0x79};
+uint8_t SUPP_CODES[4] {0b01010100, 0b01011100, 0b01110111, 0b00111000};
+uint8_t FrEE_CODES[4] {0b01011100, 0b01010100, 0b01110111, 0b00111000};
 
 byte iCtrl=INITIAL_DISPLAY_CTRL;
 uint8_t displayString[4];
@@ -69,6 +69,7 @@ void changeDisplayPowerStatus(){
     Sleep.deeply();
     buttonInterruptDetachmentAllowed = true;
   }else{
+    // Perform a voltage conversion to determine the current current level
     turnOnOffPeri(true);
     previousMinute = 0xFF;
     refreshScreen();
@@ -103,11 +104,9 @@ void refreshDisplayString(uint8_t* displayStr){
 
 void refreshAll4Digits(byte highByte, byte lowByte){
   displayString[0] = digitMap[highByte>>4];
-  displayString[1] = digitMap[highByte&0x0F] | 0x80;
+  displayString[1] = digitMap[highByte&0x0F];
   displayString[2] = digitMap[lowByte>>4];
   displayString[3] = digitMap[lowByte&0x0F];
-
-  refreshDisplayString(displayString);
 }
 
 void displayAlarmState(){
@@ -124,5 +123,7 @@ void refreshScreen(){
     }
   }
   refreshAll4Digits(rtcReadings[2],rtcReadings[1]);
+  displayString[1] |= 0x80;
+  refreshDisplayString(displayString);
   previousMinute = rtcReadings[1];
 }
