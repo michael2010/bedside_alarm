@@ -10,14 +10,14 @@
 #define RTC_SETTING_TIMEOUT 30*5
 
 /* Pin Defintions*/
-//Bitbang I2C
-#define SCL_PIN PIN_PB2
-#define SDA_PIN PIN_PB1
+////Bitbang I2C
+//#define SCL_PIN PIN_PB2
+//#define SDA_PIN PIN_PB1
 
 //Human pins
 #define DISABLE_ALARM_PIN PIN_PD1
 #define BUTTON_PIN PIN_PD2
-#define SUPPRESS_NEXT_ALARM_PIN PIN_PD5
+//#define SUPPRESS_NEXT_ALARM_PIN PIN_PD5
 #define UPD_RTC_PIN PIN_PD6
 #define UPD_RTC_INC_PIN PIN_PD7
 #define UPD_RTC_DEC_PIN PIN_PB0
@@ -31,6 +31,10 @@
 #define PERI_PWR PIN_PB3
 #define DS3231_VCC PIN_PC3
 #define DS3231_GND PIN_PC2
+
+//Voltage constants
+#define PWR_ADC_MAX (326 - PWR_ADC_OFFSET)
+#define PWR_ADC_OFFSET 170
 
 #define CLOCK_ADDRESS 0x68
 
@@ -53,11 +57,19 @@ enum ClockState :uint8_t{
   Idle
 };
 
+#define NUM_MENU_ITEMS 5
 enum Menu :uint8_t{
   Suppression=0,
   Weekday=1,
   SetDateTime=2,
-  batteryRead=3
+  batteryRead=3,
+  TestAlarm=4
+};
+
+enum AlarmMode{
+  Weekdays,
+  Everyday,
+  Disabled
 };
 
 //#define ST7920_CS_PIN 10
@@ -80,6 +92,7 @@ void advanceMenu();
 void previousMenu();
 void enterFunctionMenu();
 void useFunction();
+void toggleAlarmInterval(bool on);
 
 extern ClockState centralClkState;
 extern Menu currentMenu;
@@ -89,6 +102,8 @@ extern byte tempRtcValues[8];
 extern byte previousMinute;
 extern bool weekdayOnlyFlag;
 extern uint8_t displayString[4];
+extern bool testModeOn;
+extern AlarmMode alarmMode;
 
 static uint8_t bin2bcd (uint8_t val) { return val + 6 * (val / 10); }
 

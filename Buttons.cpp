@@ -2,23 +2,31 @@
 
 volatile bool buttonPressed = true;
 bool isNextAlarmSuppressed = false;
-bool weekdayOnlyFlag = true;
+AlarmMode alarmMode = Weekdays;
+bool testModeOn = false;
 
 extern uint8_t timeout;
 
 void displayAlarmState();
 void refreshAll4Digits(byte highByte, byte lowByte);
 
-uint8_t MENU_ITEMS[4*4] 
+uint8_t MENU_ITEMS[4*NUM_MENU_ITEMS] 
   { 0b00111111, 0b01010100, 0b01111001, 0b00000000, // Supression - "One"
     0b00111110, 0b00001110, 0b01111001, 0b01111001, // Weekday? - "LUEE"
     0b01011110, 0b01110111, 0b01111000, 0b01111001, // DateTime - "DAtE"
-    0b01111100, 0b01110111, 0b01111000, 0b01111000  // Battery - "BAtt"
+    0b01111100, 0b01110111, 0b01111000, 0b01111000, // Battery - "BAtt"
+    0b01110111, 0b00111000, 0b01000000, 0b01000000  // Test Alarm
   };
 
-uint8_t WEEKONLYFLAGCHARS[4*2] 
-  { 0b00000110, 0b01000000, 0b01101101, 0b00000000,
-    0b00000110, 0b01000000, 0b00000111, 0b00000000
+uint8_t WEEKONLYFLAGCHARS[4*3] 
+  { 0b00000110, 0b01000000, 0b01101101, 0b00000000, // 1-5
+    0b00000110, 0b01000000, 0b00000111, 0b00000000, // 1-7
+    0b01010100, 0b01011100, 0b01010100, 0b01111001  // none
+  };
+
+uint8_t ALARMMODETEXT[4*2] 
+  { 0b01011011, 0b01100110, 0b01110110, 0b01010000, // 24 hours
+    0b01111101, 0b00111111, 0b00000010, 0b00000000  // 60 seconds
   };
 
 void waitUntilReleased(uint8_t button){
@@ -222,12 +230,12 @@ void DownButtonHandler(){
 }
 
 void advanceMenu(){
-  currentMenu=Menu((((uint8_t)currentMenu)+1)%4);
+  currentMenu=Menu((((uint8_t)currentMenu)+1)%NUM_MENU_ITEMS);
   refreshDisplayString(MENU_ITEMS+((uint8_t)currentMenu)*4);
 }
 
 void previousMenu(){
-  currentMenu=Menu((((uint8_t)currentMenu)-1)%4);
+  currentMenu = currentMenu==0 ? Menu(NUM_MENU_ITEMS-1) : Menu((((uint8_t)currentMenu)-1)%NUM_MENU_ITEMS);
   refreshDisplayString(MENU_ITEMS+((uint8_t)currentMenu)*4);
 }
 
@@ -235,10 +243,6 @@ void enterFunctionMenu(){
   currentMenu=Suppression;
   centralClkState = FunctionMenu;
   refreshDisplayString(MENU_ITEMS+((uint8_t)currentMenu)*4);
-}
-
-void readBattery(){
-  
 }
 
 void useFunction(){
@@ -256,8 +260,8 @@ void useFunction(){
     }
     case Weekday:
     {
-      weekdayOnlyFlag = !weekdayOnlyFlag;
-      refreshDisplayString(weekdayOnlyFlag?WEEKONLYFLAGCHARS+4:WEEKONLYFLAGCHARS);
+      alarmMode = AlarmMode((((uint8_t)alarmMode)+1)%3);
+      refreshDisplayString(WEEKONLYFLAGCHARS+(4*alarmMode));
       break;
     }
     case batteryRead:
@@ -267,6 +271,7 @@ void useFunction(){
       uint8_t fourdigitreading [2];
       analogRead(A0);
       int sensorValue = analogRead(A0);
+//      uint8_t batteryPercentage = (((float)sensorValue) - PWR_ADC_OFFSET)/PWR_ADC_MAX;
       ADCSRA &= ~(ADEN); 
       fourdigitreading[0] = bin2bcd((uint8_t)(sensorValue%100));
       fourdigitreading[1] = bin2bcd((uint8_t)(sensorValue/100));
@@ -275,6 +280,13 @@ void useFunction(){
       
       break;
 //      float voltage= sensorValue * (10.0 / 1023.0);
+    }
+    case TestAlarm:
+    {
+      testModeOn = !testModeOn;
+      toggleAlarmInterval(testModeOn);
+      refreshDisplayString(testModeOn?ALARMMODETEXT+4:ALARMMODETEXT);
+      break;
     }
   }
 }

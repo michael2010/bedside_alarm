@@ -1,6 +1,7 @@
 #include "global.h"
 
 const uint8_t ALARM2_SETTING[5] {0x0b, 0x28, 0x06, 0x80,0b00000110};
+const uint8_t ALARM2_SETTING_PER_MINUTE[5] {0x0b, 0x28|0x80, 0x06|0x80, 0x80,0b00000110};
 byte rtcReadings[7];
 byte previousMinute;
 
@@ -28,9 +29,9 @@ void updateRTCSettings(){
   Wire.write(tempRtcValues[1]);
   Wire.endTransmission();
 
-  Wire.beginTransmission(CLOCK_ADDRESS);
-  Wire.write(ALARM2_SETTING,5);
-  Wire.endTransmission();
+//  Wire.beginTransmission(CLOCK_ADDRESS);
+//  Wire.write(ALARM2_SETTING,5);
+//  Wire.endTransmission();
 }
 
 void clearAlarm2Flag(){
@@ -38,4 +39,10 @@ void clearAlarm2Flag(){
     Wire.write(0x0F);
     Wire.write(0x08);
     Wire.endTransmission();
+}
+
+void toggleAlarmInterval(bool on){
+  Wire.beginTransmission(CLOCK_ADDRESS);
+  Wire.write(on?ALARM2_SETTING_PER_MINUTE:ALARM2_SETTING,5);
+  Wire.endTransmission();
 }

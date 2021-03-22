@@ -41,7 +41,7 @@ void setup() {
   pinMode(FD650_CLK_GATE, OUTPUT);
 //  turnOnOffPeri(true);
 
-  pinMode(SUPPRESS_NEXT_ALARM_PIN, INPUT_PULLUP);
+//  pinMode(SUPPRESS_NEXT_ALARM_PIN, INPUT_PULLUP);
   pinMode(DISABLE_ALARM_PIN, INPUT_PULLUP);
   pinMode(UPD_RTC_PIN, INPUT_PULLUP);
   pinMode(UPD_RTC_INC_PIN, INPUT_PULLUP);
@@ -81,9 +81,8 @@ void loop(){
     clockController.checkIfAlarm(2); // Must call checkIfAlarm to clear the DS3231 interrupt flag
     rtcInterrupted = false;
     readDateTimeFromRTC();
-    if(!isNextAlarmSuppressed && digitalRead(DISABLE_ALARM_PIN) && (!weekdayOnlyFlag || rtcReadings[3]<6)){
+    if(!isNextAlarmSuppressed && (alarmMode!=Disabled) && (!alarmMode==Weekdays || rtcReadings[3]<6)){
       timeout = ALARM_BEEP_PERIOD;
-      tone(SPEAKER_PIN, 1000,700);
       centralClkState = Alarming;
       //re-attach interrupt handler
       attachInterrupt(digitalPinToInterrupt(DS3231_INT), DS3231InterruptHandler, LOW);
@@ -93,7 +92,6 @@ void loop(){
       centralClkState = Sleeping;
     }
   }
-  bool anyButtonClicked = false;
   
   // Clock State handling
   switch(centralClkState){
@@ -118,6 +116,7 @@ void loop(){
       break;
     }
     case Alarming:
+      tone(SPEAKER_PIN, 1000,700);
     case Idle:
     default:
     {
